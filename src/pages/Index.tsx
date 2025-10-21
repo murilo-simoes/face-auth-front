@@ -4,12 +4,14 @@ import { CameraCapture } from "@/components/CameraCapture";
 import heroImage from "@/assets/hero-nature.jpg";
 
 const Index = () => {
-  const [capturedImageData, setCapturedImageData] = useState<string | null>(null);
+  const handleValidate = (imageData: string) => {
+    console.log("Validando reconhecimento facial:", imageData.substring(0, 50) + "...");
+    // A navegação é feita dentro do componente CameraCapture
+  };
 
-  const handleCapture = (imageData: string) => {
-    setCapturedImageData(imageData);
-    // Aqui você pode enviar para sua API de reconhecimento facial
-    console.log("Imagem capturada pronta para envio à API:", imageData.substring(0, 50) + "...");
+  const handleRegister = (imageData: string) => {
+    console.log("Registrando nova pessoa:", imageData.substring(0, 50) + "...");
+    // Aqui você enviaria para sua API para cadastrar o novo rosto
   };
 
   return (
@@ -30,12 +32,13 @@ const Index = () => {
             </div>
             
             <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-              Reconhecimento Facial para{" "}
-              <span className="text-primary">Conservação Ambiental</span>
+              Validação Facial para{" "}
+              <span className="text-primary">Ações Ambientais</span>
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Use nossa tecnologia de reconhecimento facial para registrar participação em ações ambientais e criar um futuro mais sustentável
+              Valide sua participação em ações ambientais através de reconhecimento facial. 
+              Sistema seguro e rápido para verificação de presença.
             </p>
           </div>
         </div>
@@ -47,28 +50,23 @@ const Index = () => {
           <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
             <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full text-accent-foreground font-medium mb-4">
               <Camera className="w-4 h-4" />
-              Capture sua Participação
+              Validação e Registro
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Registre-se com Facilidade
+              Valide sua Presença
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Tire uma foto para confirmar sua participação nas ações ambientais. 
-              Nossa tecnologia de reconhecimento facial garante segurança e praticidade.
+              Tire uma foto para validar se você já está cadastrado no sistema. 
+              Se não estiver, você pode se registrar imediatamente.
             </p>
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-            <CameraCapture onCapture={handleCapture} />
+            <CameraCapture 
+              onValidate={handleValidate}
+              onRegister={handleRegister}
+            />
           </div>
-
-          {capturedImageData && (
-            <div className="mt-8 p-6 bg-card rounded-lg border border-border animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <p className="text-sm text-muted-foreground text-center">
-                ✓ Foto capturada com sucesso! Pronta para envio à API de reconhecimento facial.
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
@@ -78,18 +76,18 @@ const Index = () => {
           {[
             {
               icon: Camera,
-              title: "Captura Simples",
-              description: "Interface intuitiva para capturar fotos rapidamente com sua câmera",
+              title: "Validação Rápida",
+              description: "Sistema de reconhecimento facial instantâneo para validar sua presença",
             },
             {
               icon: Leaf,
-              title: "Sustentável",
-              description: "Tecnologia a serviço da preservação ambiental e consciência ecológica",
+              title: "Registro Seguro",
+              description: "Cadastre-se uma única vez e valide sua participação em todas as ações",
             },
             {
               icon: Smartphone,
-              title: "Mobile First",
-              description: "Funciona perfeitamente em dispositivos móveis e desktops",
+              title: "Acessível",
+              description: "Funciona em qualquer dispositivo com câmera - celular, tablet ou computador",
             },
           ].map((feature, index) => (
             <div

@@ -1,14 +1,17 @@
 import { useRef, useState, useCallback } from "react";
-import { Camera, FlipHorizontal, X } from "lucide-react";
+import { Camera, FlipHorizontal, X, CheckCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface CameraCaptureProps {
-  onCapture?: (imageData: string) => void;
+  onValidate?: (imageData: string) => void;
+  onRegister?: (imageData: string) => void;
 }
 
-export const CameraCapture = ({ onCapture }: CameraCaptureProps) => {
+export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) => {
+  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -57,11 +60,39 @@ export const CameraCapture = ({ onCapture }: CameraCaptureProps) => {
         const imageData = canvas.toDataURL("image/jpeg");
         setCapturedImage(imageData);
         stopCamera();
-        onCapture?.(imageData);
         toast.success("Foto capturada!");
       }
     }
-  }, [onCapture, stopCamera]);
+  }, [stopCamera]);
+
+  const handleValidate = useCallback(() => {
+    if (capturedImage) {
+      // Aqui você chamará sua API de reconhecimento facial
+      // Simulando validação bem-sucedida
+      toast.loading("Validando reconhecimento facial...");
+      
+      setTimeout(() => {
+        toast.dismiss();
+        toast.success("Reconhecimento validado!");
+        onValidate?.(capturedImage);
+        // Redireciona para página de perfil com dados
+        navigate("/profile", { state: { imageData: capturedImage } });
+      }, 2000);
+    }
+  }, [capturedImage, onValidate, navigate]);
+
+  const handleRegister = useCallback(() => {
+    if (capturedImage) {
+      toast.loading("Registrando nova pessoa...");
+      
+      setTimeout(() => {
+        toast.dismiss();
+        toast.success("Pessoa registrada com sucesso!");
+        onRegister?.(capturedImage);
+        setCapturedImage(null);
+      }, 2000);
+    }
+  }, [capturedImage, onRegister]);
 
   const retakePhoto = useCallback(() => {
     setCapturedImage(null);
@@ -142,10 +173,41 @@ export const CameraCapture = ({ onCapture }: CameraCaptureProps) => {
               alt="Foto capturada"
               className="w-full h-full object-cover"
             />
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
-              <Button onClick={retakePhoto} variant="secondary" size="lg">
-                Tirar Novamente
-              </Button>
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+            
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4">
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={handleValidate} 
+                  variant="hero" 
+                  size="lg"
+                  className="w-full"
+                >
+                  <CheckCircle className="mr-2" />
+                  Validar Reconhecimento
+                </Button>
+                
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleRegister}
+                    variant="default"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <UserPlus className="mr-2" />
+                    Registrar Nova Pessoa
+                  </Button>
+                  
+                  <Button 
+                    onClick={retakePhoto} 
+                    variant="secondary" 
+                    size="lg"
+                    className="flex-1"
+                  >
+                    Tirar Novamente
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

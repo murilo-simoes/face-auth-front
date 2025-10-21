@@ -1,5 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Leaf, Calendar, MapPin, Award } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Leaf,
+  Calendar,
+  MapPin,
+  Award,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useEffect } from "react";
@@ -7,18 +14,28 @@ import { useEffect } from "react";
 const Profile = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const imageData = location.state?.imageData;
-
+  const { imageData, nome, nivel } = location.state;
   useEffect(() => {
     if (!imageData) {
       navigate("/");
     }
   }, [imageData, navigate]);
 
+  const nivelValidate = (nivel: number) => {
+    if (nivel === 1) {
+      return "Acesso básico";
+    }
+    if (nivel === 2) {
+      return "Acesso restrito";
+    }
+
+    return "Ministro do Meio Ambiente";
+  };
+
   // Dados simulados - aqui viriam da sua API
   const profileData = {
-    name: "Participante Ambiental",
-    participationDate: "15 de Janeiro, 2025",
+    name: nome,
+    nivel: nivelValidate(nivel),
     location: "Parque Nacional da Tijuca, RJ",
     actionsCompleted: 12,
     treesPlanted: 8,
@@ -29,11 +46,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30">
       <div className="container mx-auto px-4 py-8">
-        <Button
-          onClick={() => navigate("/")}
-          variant="ghost"
-          className="mb-6"
-        >
+        <Button onClick={() => navigate("/")} variant="ghost" className="mb-6">
           <ArrowLeft className="mr-2" />
           Voltar
         </Button>
@@ -44,14 +57,13 @@ const Profile = () => {
             <div className="bg-gradient-to-r from-primary to-primary-glow p-8 text-primary-foreground">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="w-6 h-6" />
-                <span className="text-sm font-medium">Reconhecimento Validado</span>
+                <span className="text-sm font-medium">
+                  Reconhecimento Validado
+                </span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
                 {profileData.name}
               </h1>
-              <p className="text-primary-foreground/90">
-                Participante ativo em ações de conservação ambiental
-              </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 p-8">
@@ -62,7 +74,7 @@ const Profile = () => {
                 </h3>
                 {imageData && (
                   <img
-                    src={imageData}
+                    src={"data:image/png;base64, " + imageData}
                     alt="Perfil verificado"
                     className="w-full rounded-lg shadow-md object-cover aspect-square"
                   />
@@ -75,8 +87,10 @@ const Profile = () => {
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 text-primary mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Última Participação</p>
-                      <p className="font-medium">{profileData.participationDate}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Nivel de acesso
+                      </p>
+                      <p className="font-medium">{profileData.nivel}</p>
                     </div>
                   </div>
                 </div>
@@ -96,7 +110,9 @@ const Profile = () => {
                     <Award className="w-5 h-5 text-primary mt-0.5" />
                     <div>
                       <p className="text-sm text-muted-foreground">Status</p>
-                      <p className="font-medium text-primary">{profileData.status}</p>
+                      <p className="font-medium text-primary">
+                        {profileData.status}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -133,7 +149,9 @@ const Profile = () => {
               <p className="text-3xl font-bold text-primary mb-1">
                 {profileData.wasteCollected}
               </p>
-              <p className="text-sm text-muted-foreground">Resíduos Coletados</p>
+              <p className="text-sm text-muted-foreground">
+                Resíduos Coletados
+              </p>
             </Card>
           </div>
 
@@ -143,7 +161,7 @@ const Profile = () => {
               <Leaf className="w-6 h-6 text-primary" />
               Histórico de Atividades
             </h2>
-            
+
             <div className="space-y-4">
               {[
                 {
@@ -173,23 +191,13 @@ const Profile = () => {
                       {activity.location}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{activity.date}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.date}
+                  </p>
                 </div>
               ))}
             </div>
           </Card>
-
-          {/* Actions */}
-          <div className="flex gap-4">
-            <Button
-              onClick={() => navigate("/")}
-              variant="hero"
-              size="lg"
-              className="flex-1"
-            >
-              Nova Validação
-            </Button>
-          </div>
         </div>
       </div>
     </div>

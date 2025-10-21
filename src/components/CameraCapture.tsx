@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { api, VerifyResponse } from "@/api/api";
+import axios from "axios";
 
 export const CameraCapture = () => {
   const navigate = useNavigate();
@@ -97,14 +99,39 @@ export const CameraCapture = () => {
     setTimeout(() => startCamera(), 200);
   }, [stopCamera, startCamera]);
 
-  const handleValidate = useCallback(() => {
+  const handleValidate = useCallback(async () => {
     if (!capturedImage) return;
+
     toast.loading("Validando reconhecimento facial...");
-    setTimeout(() => {
+
+    try {
+      const base64Data = capturedImage.replace(/^data:image\/\w+;base64,/, "");
+      const response = await api.post<VerifyResponse>("/verify", {
+        imagem_base64: base64Data,
+      });
+
       toast.dismiss();
-      toast.success("Reconhecimento validado!");
-      navigate("/profile", { state: { imageData: capturedImage } });
-    }, 2000);
+      toast.success(`Reconhecimento validado! Olá, ${response.data.nome}!`);
+      console.log(response.data.imagem_base64);
+      navigate("/profile", {
+        state: {
+          imageData: response.data.imagem_base64,
+          nome: response.data.nome,
+          nivel: response.data.nivel,
+        },
+      });
+    } catch (error) {
+      toast.dismiss();
+
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        toast.error("Rosto não reconhecido no sistema.");
+      } else {
+        console.error("Erro ao validar rosto:", error);
+        toast.error(
+          "Erro ao validar reconhecimento facial, nenhum rosto encontrado."
+        );
+      }
+    }
   }, [capturedImage, navigate]);
 
   const handleRegister = useCallback(() => {
@@ -199,14 +226,14 @@ export const CameraCapture = () => {
                 </Button>
 
                 <div className="flex gap-3">
-                  <Button
+                  {/* <Button
                     onClick={handleRegister}
                     variant="default"
                     size="lg"
                     className="flex-1"
                   >
                     <UserPlus className="mr-2" /> Registrar Nova Pessoa
-                  </Button>
+                  </Button> */}
 
                   <Button
                     onClick={retakePhoto}

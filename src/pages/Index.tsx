@@ -5,19 +5,6 @@ import { TestCamera } from "@/components/TestCamera";
 import heroImage from "@/assets/hero-nature.jpg";
 
 const Index = () => {
-  const handleValidate = (imageData: string) => {
-    console.log(
-      "Validando reconhecimento facial:",
-      imageData.substring(0, 50) + "..."
-    );
-    // A navegação é feita dentro do componente CameraCapture
-  };
-
-  const handleRegister = (imageData: string) => {
-    console.log("Registrando nova pessoa:", imageData.substring(0, 50) + "...");
-    // Aqui você enviaria para sua API para cadastrar o novo rosto
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30">
       {/* Hero Section */}
@@ -36,14 +23,12 @@ const Index = () => {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-              Validação Facial para{" "}
-              <span className="text-primary">Ações Ambientais</span>
+              Identificação Facial -{" "}
+              <span className="text-primary">Ministério do Ambiente</span>
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Valide sua participação em ações ambientais através de
-              reconhecimento facial. Sistema seguro e rápido para verificação de
-              presença.
+              Identifique-se para acessar o sistema do ministério do ambiente.
             </p>
           </div>
         </div>
@@ -55,22 +40,18 @@ const Index = () => {
           <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
             <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full text-accent-foreground font-medium mb-4">
               <Camera className="w-4 h-4" />
-              Validação e Registro
+              Validação
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Valide sua Presença
+              Valide sua facial
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Tire uma foto para validar se você já está cadastrado no sistema.
-              Se não estiver, você pode se registrar imediatamente.
+              Tire uma foto para validar seu acesso e nível.
             </p>
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-            <CameraCapture
-              onValidate={handleValidate}
-              onRegister={handleRegister}
-            />
+            <CameraCapture />
           </div>
         </div>
       </section>
@@ -87,9 +68,9 @@ const Index = () => {
             },
             {
               icon: Leaf,
-              title: "Registro Seguro",
+              title: "Privacidade",
               description:
-                "Cadastre-se uma única vez e valide sua participação em todas as ações",
+                "Validação local sem armazenamento de dados sensíveis",
             },
             {
               icon: Smartphone,

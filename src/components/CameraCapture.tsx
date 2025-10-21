@@ -1,16 +1,11 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Camera, FlipHorizontal, X, CheckCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-interface CameraCaptureProps {
-  onValidate?: (imageData: string) => void;
-  onRegister?: (imageData: string) => void;
-}
-
-export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) => {
+export const CameraCapture = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,80 +14,77 @@ export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) =>
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
-  const startCamera = useCallback(async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
-        audio: false,
-      });
+  const startCamera = useCallback(() => {
+    console.log("Tentando iniciar câmera...");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Seu navegador não suporta câmera ou requer HTTPS");
+      return;
+    }
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode }, audio: false })
+      .then((mediaStream) => {
         setStream(mediaStream);
         setIsCameraActive(true);
         toast.success("Câmera ativada com sucesso!");
-      }
-    } catch (error) {
-      console.error("Erro ao acessar câmera:", error);
-      toast.error("Não foi possível acessar a câmera");
-    }
+      })
+      .catch((err) => {
+        console.error("Erro ao acessar câmera:", err);
+        toast.error("Não foi possível acessar a câmera");
+      });
   }, [facingMode]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn("play() falhou:", err);
+      });
+    }
+
+    return () => {
+      if (video && video.srcObject === stream) {
+        video.pause();
+        video.srcObject = null;
+      }
+    };
+  }, [stream]);
 
   const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsCameraActive(false);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        videoRef.current.pause();
+      }
     }
   }, [stream]);
 
   const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0);
-        const imageData = canvas.toDataURL("image/jpeg");
-        setCapturedImage(imageData);
-        stopCamera();
-        toast.success("Foto capturada!");
-      }
-    }
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(videoRef.current, 0, 0);
+    const dataUrl = canvas.toDataURL("image/jpeg");
+    setCapturedImage(dataUrl);
+    stopCamera();
+    toast.success("Foto capturada!");
   }, [stopCamera]);
-
-  const handleValidate = useCallback(() => {
-    if (capturedImage) {
-      // Aqui você chamará sua API de reconhecimento facial
-      // Simulando validação bem-sucedida
-      toast.loading("Validando reconhecimento facial...");
-      
-      setTimeout(() => {
-        toast.dismiss();
-        toast.success("Reconhecimento validado!");
-        onValidate?.(capturedImage);
-        // Redireciona para página de perfil com dados
-        navigate("/profile", { state: { imageData: capturedImage } });
-      }, 2000);
-    }
-  }, [capturedImage, onValidate, navigate]);
-
-  const handleRegister = useCallback(() => {
-    if (capturedImage) {
-      toast.loading("Registrando nova pessoa...");
-      
-      setTimeout(() => {
-        toast.dismiss();
-        toast.success("Pessoa registrada com sucesso!");
-        onRegister?.(capturedImage);
-        setCapturedImage(null);
-      }, 2000);
-    }
-  }, [capturedImage, onRegister]);
 
   const retakePhoto = useCallback(() => {
     setCapturedImage(null);
@@ -102,10 +94,28 @@ export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) =>
   const flipCamera = useCallback(() => {
     stopCamera();
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-    setTimeout(() => {
-      startCamera();
-    }, 100);
+    setTimeout(() => startCamera(), 200);
   }, [stopCamera, startCamera]);
+
+  const handleValidate = useCallback(() => {
+    if (!capturedImage) return;
+    toast.loading("Validando reconhecimento facial...");
+    setTimeout(() => {
+      toast.dismiss();
+      toast.success("Reconhecimento validado!");
+      navigate("/profile", { state: { imageData: capturedImage } });
+    }, 2000);
+  }, [capturedImage, navigate]);
+
+  const handleRegister = useCallback(() => {
+    if (!capturedImage) return;
+    toast.loading("Registrando nova pessoa...");
+    setTimeout(() => {
+      toast.dismiss();
+      toast.success("Pessoa registrada com sucesso!");
+      setCapturedImage(null);
+    }, 2000);
+  }, [capturedImage]);
 
   return (
     <Card className="overflow-hidden shadow-[var(--shadow-soft)]">
@@ -116,23 +126,26 @@ export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) =>
             <p className="text-muted-foreground mb-4">
               Clique no botão abaixo para ativar a câmera
             </p>
-            <Button onClick={startCamera} variant="hero" size="lg">
+            <Button
+              onClick={startCamera}
+              variant="hero"
+              size="lg"
+              type="button"
+            >
               <Camera className="mr-2" />
               Ativar Câmera
             </Button>
           </div>
         )}
 
-        {isCameraActive && (
+        {isCameraActive && !capturedImage && (
           <>
             <video
               ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
+              className="absolute top-0 left-0 w-full h-full object-cover"
             />
             <canvas ref={canvasRef} className="hidden" />
-            
+
             <div className="absolute top-4 right-4 flex gap-2">
               <Button
                 onClick={flipCamera}
@@ -159,8 +172,7 @@ export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) =>
                 variant="hero"
                 className="rounded-full px-8"
               >
-                <Camera className="mr-2" />
-                Capturar Foto
+                <Camera className="mr-2" /> Capturar Foto
               </Button>
             </div>
           </>
@@ -174,33 +186,31 @@ export const CameraCapture = ({ onValidate, onRegister }: CameraCaptureProps) =>
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-            
+
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4">
               <div className="flex flex-col gap-3">
-                <Button 
-                  onClick={handleValidate} 
-                  variant="hero" 
+                <Button
+                  onClick={handleValidate}
+                  variant="hero"
                   size="lg"
                   className="w-full"
                 >
-                  <CheckCircle className="mr-2" />
-                  Validar Reconhecimento
+                  <CheckCircle className="mr-2" /> Validar Reconhecimento
                 </Button>
-                
+
                 <div className="flex gap-3">
-                  <Button 
+                  <Button
                     onClick={handleRegister}
                     variant="default"
                     size="lg"
                     className="flex-1"
                   >
-                    <UserPlus className="mr-2" />
-                    Registrar Nova Pessoa
+                    <UserPlus className="mr-2" /> Registrar Nova Pessoa
                   </Button>
-                  
-                  <Button 
-                    onClick={retakePhoto} 
-                    variant="secondary" 
+
+                  <Button
+                    onClick={retakePhoto}
+                    variant="secondary"
                     size="lg"
                     className="flex-1"
                   >

@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Leaf, Camera, Smartphone } from "lucide-react";
 import { CameraCapture } from "@/components/CameraCapture";
+import { TestCamera } from "@/components/TestCamera";
 import heroImage from "@/assets/hero-nature.jpg";
 
 const Index = () => {
   const handleValidate = (imageData: string) => {
-    console.log("Validando reconhecimento facial:", imageData.substring(0, 50) + "...");
+    console.log(
+      "Validando reconhecimento facial:",
+      imageData.substring(0, 50) + "..."
+    );
     // A navegação é feita dentro do componente CameraCapture
   };
 
@@ -18,27 +22,28 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-primary/20 to-background" />
-        
+
         <div className="relative container mx-auto px-4 py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full text-primary font-medium mb-4">
               <Leaf className="w-4 h-4" />
               Tecnologia para o Meio Ambiente
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
               Validação Facial para{" "}
               <span className="text-primary">Ações Ambientais</span>
             </h1>
-            
+
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Valide sua participação em ações ambientais através de reconhecimento facial. 
-              Sistema seguro e rápido para verificação de presença.
+              Valide sua participação em ações ambientais através de
+              reconhecimento facial. Sistema seguro e rápido para verificação de
+              presença.
             </p>
           </div>
         </div>
@@ -56,13 +61,13 @@ const Index = () => {
               Valide sua Presença
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Tire uma foto para validar se você já está cadastrado no sistema. 
+              Tire uma foto para validar se você já está cadastrado no sistema.
               Se não estiver, você pode se registrar imediatamente.
             </p>
           </div>
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-            <CameraCapture 
+            <CameraCapture
               onValidate={handleValidate}
               onRegister={handleRegister}
             />
@@ -77,17 +82,20 @@ const Index = () => {
             {
               icon: Camera,
               title: "Validação Rápida",
-              description: "Sistema de reconhecimento facial instantâneo para validar sua presença",
+              description:
+                "Sistema de reconhecimento facial instantâneo para validar sua presença",
             },
             {
               icon: Leaf,
               title: "Registro Seguro",
-              description: "Cadastre-se uma única vez e valide sua participação em todas as ações",
+              description:
+                "Cadastre-se uma única vez e valide sua participação em todas as ações",
             },
             {
               icon: Smartphone,
               title: "Acessível",
-              description: "Funciona em qualquer dispositivo com câmera - celular, tablet ou computador",
+              description:
+                "Funciona em qualquer dispositivo com câmera - celular, tablet ou computador",
             },
           ].map((feature, index) => (
             <div

@@ -40,9 +40,17 @@ All colors MUST be HSL.
     --radius: 0.75rem;
 
     /* Environmental theme gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(145 63% 35%) 0%, hsl(145 70% 45%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(142 25% 97%) 0%, hsl(142 30% 93%) 100%);
-    
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(145 63% 35%) 0%,
+      hsl(145 70% 45%) 100%
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      hsl(142 25% 97%) 0%,
+      hsl(142 30% 93%) 100%
+    );
+
     /* Shadows */
     --shadow-soft: 0 4px 20px -2px hsl(145 50% 35% / 0.15);
     --shadow-glow: 0 0 30px hsl(145 70% 45% / 0.25);
@@ -87,9 +95,17 @@ All colors MUST be HSL.
     --input: 140 30% 18%;
     --ring: 145 70% 45%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(145 70% 25%) 0%, hsl(145 75% 35%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(140 50% 8%) 0%, hsl(140 45% 12%) 100%);
-    
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(145 70% 25%) 0%,
+      hsl(145 75% 35%) 100%
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      hsl(140 50% 8%) 0%,
+      hsl(140 45% 12%) 100%
+    );
+
     --shadow-soft: 0 4px 20px -2px hsl(145 70% 20% / 0.3);
     --shadow-glow: 0 0 30px hsl(145 75% 40% / 0.35);
 
@@ -121,7 +137,7 @@ All colors MUST be HSL.
       align-items: center;
       justify-content: space-between;
     }
-    
+
     .profile-button-responsive {
       width: auto;
       font-size: 1rem;

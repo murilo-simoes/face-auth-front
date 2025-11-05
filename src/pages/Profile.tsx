@@ -526,21 +526,22 @@ const Profile = () => {
             </Card>
           </div>
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <FlaskConical className="w-6 h-6 text-primary" />
-                Toxinas Registradas
+          <Card className="p-4 sm:p-6 overflow-hidden">
+            <div className="flex flex-col gap-3 mb-4 profile-header-responsive">
+              <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 min-w-0 flex-shrink">
+                <FlaskConical className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+                <span className="truncate">Toxinas Registradas</span>
               </h2>
               {isNivel3 && (
                 <Button
                   onClick={openAddDialog}
                   variant="hero"
                   size="sm"
-                  className="text-primary-foreground font-semibold"
+                  className="text-primary-foreground font-semibold w-full text-sm flex-shrink-0 profile-button-responsive"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Toxina
+                  <span className="block sm:hidden">Adicionar</span>
+                  <span className="hidden sm:block">Adicionar Toxina</span>
                 </Button>
               )}
             </div>

@@ -113,3 +113,18 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @media (min-width: 461px) {
+    .profile-header-responsive {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .profile-button-responsive {
+      width: auto;
+      font-size: 1rem;
+    }
+  }
+}

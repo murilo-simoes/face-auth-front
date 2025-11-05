@@ -233,8 +233,9 @@ export const CameraCapture = () => {
               variant="hero"
               size="lg"
               type="button"
+              className="w-full sm:w-auto text-sm sm:text-base"
             >
-              <Camera className="mr-2" />
+              <Camera className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
               Ativar Câmera
             </Button>
           </div>
@@ -248,22 +249,22 @@ export const CameraCapture = () => {
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-2 right-2 flex gap-2 sm:top-4 sm:right-4">
               <Button
                 onClick={flipCamera}
                 size="icon"
                 variant="secondary"
-                className="rounded-full shadow-md"
+                className="h-9 w-9 rounded-full shadow-md sm:h-10 sm:w-10"
               >
-                <FlipHorizontal />
+                <FlipHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 onClick={stopCamera}
                 size="icon"
                 variant="destructive"
-                className="rounded-full shadow-md"
+                className="h-9 w-9 rounded-full shadow-md sm:h-10 sm:w-10"
               >
-                <X />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
 
@@ -289,34 +290,43 @@ export const CameraCapture = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4">
-              <div className="flex flex-col gap-3">
+            <div className="absolute bottom-4 left-0 right-0 w-full px-4 sm:bottom-6">
+              <div className="flex flex-col gap-3 max-w-md mx-auto">
                 <Button
                   onClick={handleValidate}
                   variant="hero"
                   size="lg"
-                  className="w-full"
+                  className="w-full text-base py-6"
                 >
-                  <CheckCircle className="mr-2" /> Validar Reconhecimento
+                  <CheckCircle className="mr-2 w-5 h-5" />
+                  <span className="hidden min-[375px]:inline">
+                    Validar Reconhecimento
+                  </span>
+                  <span className="min-[375px]:hidden">Validar</span>
                 </Button>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                   <Button
                     onClick={handleRegister}
                     variant="default"
                     size="lg"
-                    className="flex-1"
+                    className="w-full text-sm sm:text-base sm:flex-1"
                   >
-                    <UserPlus className="mr-2" /> Registrar Nova Pessoa
+                    <UserPlus className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">
+                      Registrar Nova Pessoa
+                    </span>
+                    <span className="sm:hidden">Registrar</span>
                   </Button>
 
                   <Button
                     onClick={retakePhoto}
                     variant="secondary"
                     size="lg"
-                    className="flex-1"
+                    className="w-full text-sm sm:text-base sm:flex-1"
                   >
-                    Tirar Novamente
+                    <span className="hidden sm:inline">Tirar Novamente</span>
+                    <span className="sm:hidden">Novamente</span>
                   </Button>
                 </div>
               </div>

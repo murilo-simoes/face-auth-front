@@ -6,6 +6,23 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { api, VerifyResponse } from "@/api/api";
 import axios from "axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const CameraCapture = () => {
   const navigate = useNavigate();
@@ -15,6 +32,9 @@ export const CameraCapture = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  const [registerNome, setRegisterNome] = useState("");
+  const [registerNivel, setRegisterNivel] = useState("");
 
   const startCamera = useCallback(() => {
     console.log("Tentando iniciar câmera...");
@@ -112,12 +132,13 @@ export const CameraCapture = () => {
 
       toast.dismiss();
       toast.success(`Reconhecimento validado! Olá, ${response.data.nome}!`);
-      console.log(response.data.imagem_base64);
+
       navigate("/profile", {
         state: {
           imageData: response.data.imagem_base64,
           nome: response.data.nome,
           nivel: response.data.nivel,
+          userId: response.data._id,
         },
       });
     } catch (error) {
@@ -136,13 +157,67 @@ export const CameraCapture = () => {
 
   const handleRegister = useCallback(() => {
     if (!capturedImage) return;
-    toast.loading("Registrando nova pessoa...");
-    setTimeout(() => {
-      toast.dismiss();
-      toast.success("Pessoa registrada com sucesso!");
-      setCapturedImage(null);
-    }, 2000);
+    setIsRegisterDialogOpen(true);
   }, [capturedImage]);
+
+  const submitRegister = useCallback(async () => {
+    if (!capturedImage || !registerNome.trim() || !registerNivel.trim()) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    const nivel = parseInt(registerNivel, 10);
+    if (isNaN(nivel) || nivel < 1 || nivel > 3) {
+      toast.error("Selecione um nível válido");
+      return;
+    }
+
+    toast.loading("Registrando nova pessoa...");
+
+    try {
+      const base64Data = capturedImage.replace(/^data:image\/\w+;base64,/, "");
+      const response = await api.post<{
+        mensagem: string;
+        usuario: {
+          _id: string;
+          nome: string;
+          nivel: number;
+          imagem_base64: string;
+        };
+      }>("/register", {
+        nome: registerNome.trim(),
+        nivel: nivel,
+        imagem_base64: base64Data,
+      });
+
+      toast.dismiss();
+      toast.success(response.data.mensagem || "Pessoa registrada com sucesso!");
+
+      setIsRegisterDialogOpen(false);
+      setRegisterNome("");
+      setRegisterNivel("");
+      setCapturedImage(null);
+
+      // Redirecionar para a página de perfil com os dados do usuário
+      navigate("/profile", {
+        state: {
+          imageData: response.data.usuario.imagem_base64,
+          nome: response.data.usuario.nome,
+          nivel: response.data.usuario.nivel,
+          userId: response.data.usuario._id,
+        },
+      });
+    } catch (error) {
+      toast.dismiss();
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.erro || error.message;
+        toast.error(`Erro ao registrar: ${errorMessage}`);
+      } else {
+        console.error("Erro ao registrar pessoa:", error);
+        toast.error("Erro ao registrar pessoa");
+      }
+    }
+  }, [capturedImage, registerNome, registerNivel, navigate]);
 
   return (
     <Card className="overflow-hidden shadow-[var(--shadow-soft)]">
@@ -226,14 +301,14 @@ export const CameraCapture = () => {
                 </Button>
 
                 <div className="flex gap-3">
-                  {/* <Button
+                  <Button
                     onClick={handleRegister}
                     variant="default"
                     size="lg"
                     className="flex-1"
                   >
                     <UserPlus className="mr-2" /> Registrar Nova Pessoa
-                  </Button> */}
+                  </Button>
 
                   <Button
                     onClick={retakePhoto}
@@ -249,6 +324,64 @@ export const CameraCapture = () => {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={isRegisterDialogOpen}
+        onOpenChange={setIsRegisterDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Nova Pessoa</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para registrar uma nova pessoa no sistema
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="nome">Nome</Label>
+              <Input
+                id="nome"
+                placeholder="Digite o nome"
+                value={registerNome}
+                onChange={(e) => setRegisterNome(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    submitRegister();
+                  }
+                }}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nivel">Nível</Label>
+              <Select value={registerNivel} onValueChange={setRegisterNivel}>
+                <SelectTrigger id="nivel">
+                  <SelectValue placeholder="Selecione o nível" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Nível 1</SelectItem>
+                  <SelectItem value="2">Nível 2</SelectItem>
+                  <SelectItem value="3">Nível 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsRegisterDialogOpen(false);
+                setRegisterNome("");
+                setRegisterNivel("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={submitRegister} variant="default">
+              Registrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

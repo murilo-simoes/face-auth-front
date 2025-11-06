@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://scientists-attempted-boat-shares.trycloudflare.com",
+  baseURL: "https://nomination-norman-packaging-reggae.trycloudflare.com",
 });
 
 export interface Toxina {

@@ -28,9 +28,14 @@ export const CameraCapture = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedVideoBlob, setCapturedVideoBlob] = useState<Blob | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [registerNome, setRegisterNome] = useState("");
@@ -79,7 +84,32 @@ export const CameraCapture = () => {
     };
   }, [stream]);
 
+  // Limpar recursos ao desmontar
+  useEffect(() => {
+    return () => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
+
   const stopCamera = useCallback(() => {
+    // Parar gravação se estiver gravando
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.dismiss();
+    }
+
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
@@ -91,25 +121,154 @@ export const CameraCapture = () => {
     }
   }, [stream]);
 
-  const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+  const freezeLastFrame = useCallback((videoBlob: Blob) => {
+    if (!canvasRef.current) return;
 
-    const canvas = canvasRef.current;
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(videoBlob);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
 
-    ctx.drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL("image/jpeg");
-    setCapturedImage(dataUrl);
-    stopCamera();
-    toast.success("Foto capturada!");
-  }, [stopCamera]);
+    video.onloadedmetadata = () => {
+      video.currentTime = video.duration; // Ir para o último frame
+    };
+
+    video.onseeked = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      ctx.drawImage(video, 0, 0);
+      const dataUrl = canvas.toDataURL("image/jpeg");
+      setCapturedImage(dataUrl);
+      URL.revokeObjectURL(url);
+    };
+
+    video.onerror = () => {
+      console.error("Erro ao carregar vídeo para preview");
+      URL.revokeObjectURL(url);
+      toast.error("Erro ao gerar preview do vídeo");
+    };
+  }, []);
+
+  const captureVideo = useCallback(() => {
+    if (!stream || !videoRef.current) return;
+
+    // Verificar se MediaRecorder é suportado
+    if (typeof MediaRecorder === "undefined") {
+      toast.error("Seu navegador não suporta gravação de vídeo");
+      return;
+    }
+
+    // Determinar o tipo MIME suportado (webm é mais comum)
+    let mimeType = "video/webm";
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+      mimeType = "video/webm;codecs=vp9";
+    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+      mimeType = "video/webm;codecs=vp8";
+    } else if (MediaRecorder.isTypeSupported("video/webm")) {
+      mimeType = "video/webm";
+    } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+      mimeType = "video/mp4";
+    }
+
+    try {
+      recordedChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 2500000, // 2.5 Mbps para qualidade razoável
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        // Normalizar o tipo MIME para apenas "video/webm" ou "video/mp4" (sem codecs)
+        // O backend Flask só aceita esses tipos exatos
+        const normalizedMimeType = mimeType.includes("webm")
+          ? "video/webm"
+          : "video/mp4";
+
+        const blob = new Blob(recordedChunksRef.current, {
+          type: normalizedMimeType,
+        });
+
+        // Validar tamanho do blob (máximo 15 MB)
+        if (blob.size > 15 * 1024 * 1024) {
+          toast.error("Vídeo muito grande. Tente novamente.");
+          setIsRecording(false);
+          return;
+        }
+
+        setCapturedVideoBlob(blob);
+
+        // Criar preview do último frame
+        freezeLastFrame(blob);
+
+        setIsRecording(false);
+        toast.dismiss();
+        toast.success("Vídeo capturado!");
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error("Erro ao gravar vídeo:", event);
+        toast.error("Erro ao gravar vídeo");
+        setIsRecording(false);
+        toast.dismiss();
+      };
+
+      // Iniciar gravação
+      mediaRecorder.start();
+      setIsRecording(true);
+
+      // Mostrar toast de loading
+      toast.loading("Capturando...", {
+        id: "recording-toast",
+      });
+
+      // Parar após 3 segundos
+      setTimeout(() => {
+        if (mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+        }
+      }, 3000);
+    } catch (error) {
+      console.error("Erro ao iniciar gravação:", error);
+      toast.error("Erro ao iniciar gravação de vídeo");
+      setIsRecording(false);
+      toast.dismiss();
+    }
+  }, [stream, freezeLastFrame]);
 
   const retakePhoto = useCallback(() => {
     setCapturedImage(null);
+    setCapturedVideoBlob(null);
+    setIsValidating(false); // Resetar estado de validação
+    recordedChunksRef.current = [];
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
     startCamera();
   }, [startCamera]);
 
@@ -120,15 +279,48 @@ export const CameraCapture = () => {
   }, [stopCamera, startCamera]);
 
   const handleValidate = useCallback(async () => {
-    if (!capturedImage) return;
+    if (!capturedVideoBlob || isValidating) return;
 
+    setIsValidating(true);
     toast.loading("Validando reconhecimento facial...");
 
     try {
-      const base64Data = capturedImage.replace(/^data:image\/\w+;base64,/, "");
-      const response = await api.post<VerifyResponse>("/verify", {
-        imagem_base64: base64Data,
+      // Determinar formato do vídeo
+      const videoFormat = capturedVideoBlob.type.includes("webm")
+        ? "webm"
+        : "mp4";
+      const fileExtension = videoFormat === "webm" ? "webm" : "mp4";
+
+      // Criar FormData
+      const formData = new FormData();
+      // Criar um File a partir do Blob para garantir que o tipo MIME seja preservado
+      const videoFile = new File(
+        [capturedVideoBlob],
+        `capture.${fileExtension}`,
+        {
+          type: capturedVideoBlob.type,
+        }
+      );
+      formData.append("video", videoFile);
+
+      // Debug: verificar se o FormData está correto
+      console.log("Enviando vídeo:", {
+        size: capturedVideoBlob.size,
+        type: capturedVideoBlob.type,
+        format: videoFormat,
+        fileType: videoFile.type,
+        fileName: videoFile.name,
       });
+
+      // Enviar vídeo via FormData
+      // O interceptor do axios garante que o Content-Type seja definido corretamente pelo browser
+      const response = await api.post<VerifyResponse>("/verify", formData, {
+        headers: {
+          "X-Video-Format": videoFormat,
+        },
+      });
+
+      console.log("Response:", response.data);
 
       toast.dismiss();
       toast.success(`Reconhecimento validado! Olá, ${response.data.nome}!`);
@@ -143,6 +335,7 @@ export const CameraCapture = () => {
       });
     } catch (error) {
       toast.dismiss();
+      setIsValidating(false); // Reabilitar botões em caso de erro
 
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         toast.error("Rosto não reconhecido no sistema.");
@@ -153,15 +346,15 @@ export const CameraCapture = () => {
         );
       }
     }
-  }, [capturedImage, navigate]);
+  }, [capturedVideoBlob, navigate, isValidating]);
 
   const handleRegister = useCallback(() => {
-    if (!capturedImage) return;
+    if (!capturedVideoBlob) return;
     setIsRegisterDialogOpen(true);
-  }, [capturedImage]);
+  }, [capturedVideoBlob]);
 
   const submitRegister = useCallback(async () => {
-    if (!capturedImage || !registerNome.trim() || !registerNivel.trim()) {
+    if (!capturedVideoBlob || !registerNome.trim() || !registerNivel.trim()) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -172,10 +365,42 @@ export const CameraCapture = () => {
       return;
     }
 
-    toast.loading("Registrando nova pessoa...");
+    toast.loading("Enviando...");
 
     try {
-      const base64Data = capturedImage.replace(/^data:image\/\w+;base64,/, "");
+      // Determinar formato do vídeo
+      const videoFormat = capturedVideoBlob.type.includes("webm")
+        ? "webm"
+        : "mp4";
+      const fileExtension = videoFormat === "webm" ? "webm" : "mp4";
+
+      // Criar FormData
+      const formData = new FormData();
+      // Criar um File a partir do Blob para garantir que o tipo MIME seja preservado
+      const videoFile = new File(
+        [capturedVideoBlob],
+        `capture.${fileExtension}`,
+        {
+          type: capturedVideoBlob.type,
+        }
+      );
+      formData.append("video", videoFile);
+      formData.append("nome", registerNome.trim());
+      formData.append("nivel", nivel.toString());
+
+      // Debug: verificar se o FormData está correto
+      console.log("Registrando com vídeo:", {
+        size: capturedVideoBlob.size,
+        type: capturedVideoBlob.type,
+        format: videoFormat,
+        fileType: videoFile.type,
+        fileName: videoFile.name,
+        nome: registerNome.trim(),
+        nivel: nivel,
+      });
+
+      // Enviar vídeo via FormData
+      // O interceptor do axios garante que o Content-Type seja definido corretamente pelo browser
       const response = await api.post<{
         mensagem: string;
         usuario: {
@@ -184,10 +409,10 @@ export const CameraCapture = () => {
           nivel: number;
           imagem_base64: string;
         };
-      }>("/register", {
-        nome: registerNome.trim(),
-        nivel: nivel,
-        imagem_base64: base64Data,
+      }>("/register", formData, {
+        headers: {
+          "X-Video-Format": videoFormat,
+        },
       });
 
       toast.dismiss();
@@ -197,6 +422,7 @@ export const CameraCapture = () => {
       setRegisterNome("");
       setRegisterNivel("");
       setCapturedImage(null);
+      setCapturedVideoBlob(null);
 
       // Redirecionar para a página de perfil com os dados do usuário
       navigate("/profile", {
@@ -217,11 +443,11 @@ export const CameraCapture = () => {
         toast.error("Erro ao registrar pessoa");
       }
     }
-  }, [capturedImage, registerNome, registerNivel, navigate]);
+  }, [capturedVideoBlob, registerNome, registerNivel, navigate]);
 
   return (
     <Card className="overflow-hidden shadow-[var(--shadow-soft)]">
-      <div className="relative bg-muted aspect-[4/3] flex items-center justify-center">
+      <div className="relative bg-muted min-h-[70vh] sm:aspect-[4/3] flex items-center justify-center">
         {!isCameraActive && !capturedImage && (
           <div className="text-center p-6">
             <Camera className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -255,6 +481,7 @@ export const CameraCapture = () => {
                 size="icon"
                 variant="secondary"
                 className="h-9 w-9 rounded-full shadow-md sm:h-10 sm:w-10"
+                disabled={isRecording}
               >
                 <FlipHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
@@ -263,6 +490,7 @@ export const CameraCapture = () => {
                 size="icon"
                 variant="destructive"
                 className="h-9 w-9 rounded-full shadow-md sm:h-10 sm:w-10"
+                disabled={isRecording}
               >
                 <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
@@ -270,26 +498,27 @@ export const CameraCapture = () => {
 
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
               <Button
-                onClick={capturePhoto}
+                onClick={captureVideo}
                 size="lg"
                 variant="hero"
                 className="rounded-full px-8"
+                disabled={isRecording}
               >
-                <Camera className="mr-2" /> Capturar Foto
+                <Camera className="mr-2" />{" "}
+                {isRecording ? "Gravando..." : "Capturar"}
               </Button>
             </div>
           </>
         )}
 
         {capturedImage && (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full min-h-[70vh] sm:min-h-0">
             <img
               src={capturedImage}
-              alt="Foto capturada"
-              className="w-full h-full object-cover"
+              alt="Preview do vídeo capturado"
+              className="w-full h-full min-h-[70vh] sm:min-h-0 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-
             <div className="absolute bottom-4 left-0 right-0 w-full px-4 sm:bottom-6">
               <div className="flex flex-col gap-3 max-w-md mx-auto">
                 <Button
@@ -297,6 +526,7 @@ export const CameraCapture = () => {
                   variant="hero"
                   size="lg"
                   className="w-full text-base py-6"
+                  disabled={isValidating}
                 >
                   <CheckCircle className="mr-2 w-5 h-5" />
                   <span className="hidden min-[375px]:inline">
@@ -311,6 +541,7 @@ export const CameraCapture = () => {
                     variant="default"
                     size="lg"
                     className="w-full text-sm sm:text-base sm:flex-1"
+                    disabled={isValidating}
                   >
                     <UserPlus className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="hidden sm:inline">
@@ -324,9 +555,10 @@ export const CameraCapture = () => {
                     variant="secondary"
                     size="lg"
                     className="w-full text-sm sm:text-base sm:flex-1"
+                    disabled={isValidating}
                   >
                     <span className="hidden sm:inline">Tirar Novamente</span>
-                    <span className="sm:hidden">Novamente</span>
+                    <span className="sm:hidden">Capturar Novamente</span>
                   </Button>
                 </div>
               </div>

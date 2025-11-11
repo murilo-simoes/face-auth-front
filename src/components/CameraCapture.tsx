@@ -130,17 +130,29 @@ export const CameraCapture = () => {
     video.src = url;
     video.muted = true;
     video.playsInline = true;
+    video.preload = "metadata";
 
-    video.onloadedmetadata = () => {
-      video.currentTime = video.duration; // Ir para o último frame
-    };
+    let hasSeeked = false;
 
-    video.onseeked = () => {
+    const extractFrame = () => {
       const canvas = canvasRef.current;
-      if (!canvas) {
-        URL.revokeObjectURL(url);
+      if (!canvas || hasSeeked) {
         return;
       }
+
+      // Verificar se o vídeo tem dimensões válidas
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn("Dimensões do vídeo inválidas, tentando novamente...");
+        setTimeout(() => {
+          if (video.readyState >= 2) {
+            // HAVE_CURRENT_DATA
+            extractFrame();
+          }
+        }, 100);
+        return;
+      }
+
+      hasSeeked = true;
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -151,17 +163,68 @@ export const CameraCapture = () => {
         return;
       }
 
-      ctx.drawImage(video, 0, 0);
-      const dataUrl = canvas.toDataURL("image/jpeg");
-      setCapturedImage(dataUrl);
-      URL.revokeObjectURL(url);
+      try {
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        setCapturedImage(dataUrl);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Erro ao desenhar frame no canvas:", error);
+        URL.revokeObjectURL(url);
+        toast.error("Erro ao gerar preview do vídeo");
+      }
     };
 
-    video.onerror = () => {
-      console.error("Erro ao carregar vídeo para preview");
+    video.onloadedmetadata = () => {
+      // Aguardar um pouco para garantir que os metadados estão totalmente carregados
+      if (video.duration && isFinite(video.duration)) {
+        // Ir para o último frame (um pouco antes do fim para garantir que há frame)
+        video.currentTime = Math.max(0, video.duration - 0.1);
+      } else {
+        // Se duration não estiver disponível, usar o último frame disponível
+        video.currentTime = Number.MAX_SAFE_INTEGER;
+      }
+    };
+
+    video.onseeked = () => {
+      extractFrame();
+    };
+
+    video.onloadeddata = () => {
+      // Fallback: se o seeked não disparar, tentar extrair após loadeddata
+      if (!hasSeeked && video.readyState >= 2) {
+        setTimeout(() => {
+          if (!hasSeeked) {
+            extractFrame();
+          }
+        }, 100);
+      }
+    };
+
+    video.oncanplay = () => {
+      // Outro fallback: se ainda não extraiu, tentar quando o vídeo pode ser reproduzido
+      if (!hasSeeked && video.readyState >= 2) {
+        setTimeout(() => {
+          if (!hasSeeked) {
+            extractFrame();
+          }
+        }, 200);
+      }
+    };
+
+    video.onerror = (error) => {
+      console.error("Erro ao carregar vídeo para preview:", error);
       URL.revokeObjectURL(url);
       toast.error("Erro ao gerar preview do vídeo");
     };
+
+    // Timeout de segurança: se após 3 segundos não conseguir extrair, usar fallback
+    setTimeout(() => {
+      if (!hasSeeked && video.readyState >= 2) {
+        console.warn("Timeout ao extrair frame, tentando fallback...");
+        extractFrame();
+      }
+    }, 3000);
   }, []);
 
   const captureVideo = useCallback(() => {
@@ -354,7 +417,7 @@ export const CameraCapture = () => {
   }, [capturedVideoBlob]);
 
   const submitRegister = useCallback(async () => {
-    if (!capturedVideoBlob || !registerNome.trim() || !registerNivel.trim()) {
+    if (!capturedImage || !registerNome.trim() || !registerNivel.trim()) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -365,42 +428,13 @@ export const CameraCapture = () => {
       return;
     }
 
-    toast.loading("Enviando...");
+    toast.loading("Registrando nova pessoa...");
 
     try {
-      // Determinar formato do vídeo
-      const videoFormat = capturedVideoBlob.type.includes("webm")
-        ? "webm"
-        : "mp4";
-      const fileExtension = videoFormat === "webm" ? "webm" : "mp4";
+      // Extrair base64 da imagem capturada (preview do último frame do vídeo)
+      const base64Data = capturedImage.replace(/^data:image\/\w+;base64,/, "");
 
-      // Criar FormData
-      const formData = new FormData();
-      // Criar um File a partir do Blob para garantir que o tipo MIME seja preservado
-      const videoFile = new File(
-        [capturedVideoBlob],
-        `capture.${fileExtension}`,
-        {
-          type: capturedVideoBlob.type,
-        }
-      );
-      formData.append("video", videoFile);
-      formData.append("nome", registerNome.trim());
-      formData.append("nivel", nivel.toString());
-
-      // Debug: verificar se o FormData está correto
-      console.log("Registrando com vídeo:", {
-        size: capturedVideoBlob.size,
-        type: capturedVideoBlob.type,
-        format: videoFormat,
-        fileType: videoFile.type,
-        fileName: videoFile.name,
-        nome: registerNome.trim(),
-        nivel: nivel,
-      });
-
-      // Enviar vídeo via FormData
-      // O interceptor do axios garante que o Content-Type seja definido corretamente pelo browser
+      // Enviar imagem base64 via JSON (formato original do endpoint /register)
       const response = await api.post<{
         mensagem: string;
         usuario: {
@@ -409,10 +443,10 @@ export const CameraCapture = () => {
           nivel: number;
           imagem_base64: string;
         };
-      }>("/register", formData, {
-        headers: {
-          "X-Video-Format": videoFormat,
-        },
+      }>("/register", {
+        nome: registerNome.trim(),
+        nivel: nivel,
+        imagem_base64: base64Data,
       });
 
       toast.dismiss();
@@ -443,7 +477,7 @@ export const CameraCapture = () => {
         toast.error("Erro ao registrar pessoa");
       }
     }
-  }, [capturedVideoBlob, registerNome, registerNivel, navigate]);
+  }, [capturedImage, registerNome, registerNivel, navigate]);
 
   return (
     <Card className="overflow-hidden shadow-[var(--shadow-soft)]">

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://floors-creativity-probe-ultimately.trycloudflare.com",
+  baseURL: "https://gym-novel-subject-normal.trycloudflare.com",
 });
 
 // Interceptor para garantir que FormData seja enviado corretamente

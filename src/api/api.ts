@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://gym-novel-subject-normal.trycloudflare.com",
+  baseURL: "https://face-auth-unip.loca.lt",
 });
 
 // Interceptor para garantir que FormData seja enviado corretamente

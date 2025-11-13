@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://face-auth-unip.loca.lt",
+  baseURL: "https://julienne-armigerous-seymour.ngrok-free.dev",
 });
 
 // Interceptor para garantir que FormData seja enviado corretamente

@@ -129,10 +129,7 @@ const Profile = () => {
         return;
       }
 
-      if (
-        (Array.isArray(toxinas) && toxinas.length > 0) ||
-        shouldRestoreScrollRef.current
-      ) {
+      if (toxinas.length > 0 || shouldRestoreScrollRef.current) {
         const scrollPos =
           window.scrollY ||
           window.pageYOffset ||
@@ -148,22 +145,16 @@ const Profile = () => {
       try {
         const response = await api.get<Toxina[]>(`/toxin/user/${userId}`);
         if (response.data) {
-          // Garantir que response.data seja sempre um array
-          const toxinasData = Array.isArray(response.data) ? response.data : [];
-          setToxinas(toxinasData);
-        } else {
-          setToxinas([]);
+          setToxinas(response.data);
         }
       } catch (error) {
         toast.error("Erro ao carregar toxinas");
-        setToxinas([]); // Garantir que seja um array vazio em caso de erro
       } finally {
         if (showLoading) {
           setIsLoadingToxinas(false);
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [nome, nivel, userId, toxinas.length]
   );
 
@@ -475,7 +466,7 @@ const Profile = () => {
                         Total de Toxinas
                       </p>
                       <p className="font-medium text-2xl">
-                        {Array.isArray(toxinas) ? toxinas.length : 0}
+                        {toxinas?.length || 0}
                       </p>
                     </div>
                   </div>
@@ -500,9 +491,8 @@ const Profile = () => {
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <p className="text-3xl font-bold text-red-600 mb-1">
-                {Array.isArray(toxinas)
-                  ? toxinas.filter((t: Toxina) => t.periculosidade === 3).length
-                  : 0}
+                {toxinas?.filter((t: Toxina) => t.periculosidade === 3)
+                  .length || 0}
               </p>
               <p className="text-sm text-muted-foreground">
                 Alta Periculosidade
@@ -514,9 +504,8 @@ const Profile = () => {
                 <AlertTriangle className="w-6 h-6 text-orange-600" />
               </div>
               <p className="text-3xl font-bold text-orange-600 mb-1">
-                {Array.isArray(toxinas)
-                  ? toxinas.filter((t: Toxina) => t.periculosidade === 2).length
-                  : 0}
+                {toxinas?.filter((t: Toxina) => t.periculosidade === 2)
+                  .length || 0}
               </p>
               <p className="text-sm text-muted-foreground">
                 Média Periculosidade
@@ -528,9 +517,8 @@ const Profile = () => {
                 <AlertTriangle className="w-6 h-6 text-yellow-600" />
               </div>
               <p className="text-3xl font-bold text-yellow-600 mb-1">
-                {Array.isArray(toxinas)
-                  ? toxinas.filter((t: Toxina) => t.periculosidade === 1).length
-                  : 0}
+                {toxinas?.filter((t: Toxina) => t.periculosidade === 1)
+                  .length || 0}
               </p>
               <p className="text-sm text-muted-foreground">
                 Baixa Periculosidade
@@ -563,7 +551,7 @@ const Profile = () => {
                 <FlaskConical className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
                 <p>Carregando toxinas...</p>
               </div>
-            ) : !Array.isArray(toxinas) || toxinas.length === 0 ? (
+            ) : !toxinas || toxinas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FlaskConical className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Nenhuma toxina registrada</p>

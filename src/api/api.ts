@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://julienne-armigerous-seymour.ngrok-free.dev",
+  baseURL: "https://api.murilosimoes.com.br",
 });
 
 // Interceptor para garantir que FormData seja enviado corretamente

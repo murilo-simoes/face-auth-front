@@ -1,5 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, FlipHorizontal, X, CheckCircle, UserPlus } from "lucide-react";
+import {
+  Camera,
+  FlipHorizontal,
+  X,
+  CheckCircle,
+  UserPlus,
+  Info,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -508,6 +515,16 @@ export const CameraCapture = () => {
               className="absolute top-0 left-0 w-full h-full object-cover"
             />
             <canvas ref={canvasRef} className="hidden" />
+
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Info className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">
+                  Mantenha seu rosto próximo e visível na câmera
+                </span>
+                <span className="sm:hidden">Rosto próximo e visível</span>
+              </div>
+            </div>
 
             <div className="absolute top-2 right-2 flex gap-2 sm:top-4 sm:right-4">
               <Button
